@@ -14,15 +14,15 @@ RUN npm install && \
 # Copy source
 COPY . .
 
-# Build client
-RUN cd client && npm run build
+# Build client и скопировать в server/dist (откуда сервер его отдаёт)
+RUN cd client && npm run build && cp -r dist ../server/dist
 
 # Create data directory
 RUN mkdir -p server/data
 
-EXPOSE 3001
+EXPOSE 10000
 
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=10000
 
 CMD ["node", "server/index.js"]
