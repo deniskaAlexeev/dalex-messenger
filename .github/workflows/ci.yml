@@ -1,0 +1,49 @@
+name: CI — Build & Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: 📦 Install server dependencies
+        run: cd server && npm ci
+
+      - name: 📦 Install client dependencies
+        run: cd client && npm ci
+
+      - name: 🔨 Build client
+        run: cd client && npm run build
+
+      - name: ✅ Verify build output
+        run: ls -la client/dist/
+
+      - name: 🚀 Trigger Render deploy
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            curl -s "${{ secrets.RENDER_DEPLOY_HOOK }}" \
+              -X POST \
+              -H "Content-Type: application/json" \
+              -d '{}' \
+              && echo "✅ Deploy triggered on Render"
+          else
+            echo "⚠️ RENDER_DEPLOY_HOOK not set — skipping auto-deploy"
+          fi
