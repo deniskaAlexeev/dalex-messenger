@@ -14,19 +14,16 @@ router.get('/', authenticateToken, async (req, res) => {
   );
 
   const result = await Promise.all(convs.map(async conv => {
-    // unread count
     const unreadRow = await db.get(
       'SELECT COUNT(*) as cnt FROM messages WHERE conversation_id = ? AND created_at > ? AND sender_id != ? AND is_deleted = 0',
       [conv.id, conv.last_read_at || 0, req.user.id]
     );
-
-    // last message
     const lastMsg = await db.get(
-      'SELECT id, content, sender_id, created_at, is_deleted FROM messages WHERE conversation_id = ? AND is_deleted = 0 ORDER BY created_at DESC LIMIT 1',
+      'SELECT id, content, sender_id, created_at, is_deleted, message_type FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1',
       [conv.id]
     );
-
     let otherUser = null;
+    let memberCount = 0;
     if (conv.type === 'direct') {
       otherUser = await db.get(
         `SELECT u.id, u.username, u.display_name, u.avatar_color, u.is_online, u.last_seen
@@ -34,9 +31,11 @@ router.get('/', authenticateToken, async (req, res) => {
          WHERE cp.conversation_id = ? AND cp.user_id != ?`,
         [conv.id, req.user.id]
       );
+    } else {
+      const mc = await db.get('SELECT COUNT(*) as cnt FROM conversation_participants WHERE conversation_id = ?', [conv.id]);
+      memberCount = mc?.cnt || 0;
     }
-
-    return { ...conv, unread_count: unreadRow?.cnt || 0, last_message: lastMsg, other_user: otherUser };
+    return { ...conv, unread_count: unreadRow?.cnt || 0, last_message: lastMsg, other_user: otherUser, member_count: memberCount };
   }));
 
   res.json(result);
@@ -122,3 +121,35 @@ router.delete('/:convId/messages/:msgId', authenticateToken, async (req, res) =>
 });
 
 module.exports = router;
+
+// POST /api/conversations/group — создать групповой чат
+router.post('/group', authenticateToken, async (req, res) => {
+  const { name, memberIds } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Название группы обязательно' });
+  if (!Array.isArray(memberIds) || memberIds.length < 1) return res.status(400).json({ error: 'Добавьте хотя бы одного участника' });
+
+  const now = Date.now();
+  const convId = require('uuid').v4();
+
+  await db.run(
+    "INSERT INTO conversations (id, type, name, created_by, created_at, updated_at) VALUES (?, 'group', ?, ?, ?, ?)",
+    [convId, name.trim(), req.user.id, now, now]
+  );
+
+  // Добавить создателя
+  await db.run('INSERT INTO conversation_participants (id, conversation_id, user_id, joined_at) VALUES (?, ?, ?, ?)',
+    [require('uuid').v4(), convId, req.user.id, now]);
+
+  // Добавить участников
+  for (const uid of memberIds) {
+    const u = await db.get('SELECT id FROM users WHERE id = ?', [uid]);
+    if (u) {
+      await db.run('INSERT OR IGNORE INTO conversation_participants (id, conversation_id, user_id, joined_at) VALUES (?, ?, ?, ?)',
+        [require('uuid').v4(), convId, uid, now]);
+    }
+  }
+
+  const memberCount = await db.get('SELECT COUNT(*) as cnt FROM conversation_participants WHERE conversation_id = ?', [convId]);
+  const conv = await db.get('SELECT * FROM conversations WHERE id = ?', [convId]);
+  res.status(201).json({ ...conv, member_count: memberCount?.cnt || 0 });
+});

@@ -307,3 +307,30 @@
 }
 
 .logoutBtn:hover { color: var(--error); }
+
+.convAvatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.groupBadge {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 16px;
+  height: 16px;
+  background: #a855f7;
+  border: 2px solid var(--bg-secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .sidebar { width: 100vw; }
+  .convItem { padding: 12px 10px; }
+  .userBar { padding: 14px 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+}

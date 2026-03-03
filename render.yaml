@@ -1,42 +1,32 @@
-# Конфигурация для автодеплоя на Render.com
-# Документация: https://render.com/docs/render-yaml-spec
+# Конфигурация деплоя ДАЛЕКС на Render.com
+# Render видит этот файл и настраивает всё автоматически
 
 services:
   - type: web
     name: dalex-messenger
     runtime: node
-    region: frankfurt  # ближайший к РФ регион
+    region: frankfurt
     plan: free
 
-    # Что выполнить при деплое
-    buildCommand: |
-      cd server && npm install --production
-      cd ../client && npm install && npm run build
-      cp -r client/dist server/dist
+    buildCommand: cd server && npm install && cd ../client && npm install && npm run build && cp -r dist ../server/dist
 
-    # Что запустить для старта
     startCommand: node server/index.js
 
-    # Переменные окружения (значения задаются в dashboard Render)
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: CLIENT_URL
-        fromService:
-          type: web
-          name: dalex-messenger
-          property: url
+        sync: false
       - key: JWT_SECRET
-        generateValue: true   # Render сам сгенерирует случайный ключ
+        generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
 
-    # Health check
     healthCheckPath: /api/health
 
-    # Диск для хранения SQLite базы данных (100 GB бесплатно)
+    # Постоянный диск — сюда пишем SQLite БД, он НЕ сбрасывается при деплое
     disk:
       name: dalex-db
       mountPath: /data

@@ -1,0 +1,36 @@
+.micBtn {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); transition: all var(--transition); flex-shrink: 0;
+}
+.micBtn:hover { color: var(--accent); background: var(--accent-dim); }
+
+.recorder {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg-tertiary); border: 1px solid var(--border);
+  border-radius: var(--radius-full); padding: 6px 12px;
+  flex: 1; min-width: 0;
+}
+
+.recDot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--error); flex-shrink: 0;
+  animation: pulse 1s ease infinite;
+}
+
+.timer { font-size: 13px; font-weight: 600; color: var(--text-primary); font-family: var(--font-mono); min-width: 36px; }
+.recLabel { font-size: 12px; color: var(--text-muted); flex: 1; }
+
+.playBtn { font-size: 18px; background: none; border: none; cursor: pointer; line-height: 1; }
+
+.btnStop, .btnSend, .btnCancel {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition); flex-shrink: 0;
+}
+.btnStop { background: var(--error); color: white; }
+.btnStop:hover { background: #dc2626; }
+.btnSend { background: var(--accent); color: white; }
+.btnSend:hover { background: var(--accent-hover); }
+.btnCancel { background: var(--bg-hover); color: var(--text-muted); }
+.btnCancel:hover { color: var(--error); }

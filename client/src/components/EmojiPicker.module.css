@@ -1,0 +1,51 @@
+.picker {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  border-bottom: none;
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 8px 4px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.tab {
+  width: 32px; height: 28px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--transition);
+}
+.tab:hover { background: var(--bg-hover); }
+.tabActive { background: var(--accent-dim); }
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.emoji {
+  width: 36px; height: 36px;
+  font-size: 20px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition);
+  line-height: 1;
+}
+.emoji:hover { background: var(--bg-hover); }
+
+@media (max-width: 768px) {
+  .picker { max-height: 220px; }
+  .emoji { width: 40px; height: 40px; font-size: 22px; }
+}

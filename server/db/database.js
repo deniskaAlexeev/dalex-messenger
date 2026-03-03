@@ -1,26 +1,37 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const logger = require('../logger');
 
-// На Render.com используем примонтированный диск /data (постоянное хранилище)
-// Локально — папка server/data
-const isProd = process.env.NODE_ENV === 'production';
-const hasPersistentDisk = isProd && fs.existsSync('/data');
-const DB_DIR = hasPersistentDisk ? '/data' : path.join(__dirname, '../data');
-const DB_PATH = path.join(DB_DIR, 'dalex.db');
+const getDbPath = () => {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+  if (process.env.NODE_ENV === 'production') {
+    // Railway: переменная RAILWAY_VOLUME_MOUNT_PATH или /data
+    const vol = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+    if (vol && fs.existsSync(vol)) return path.join(vol, 'dalex.db');
+    if (fs.existsSync('/data')) return '/data/dalex.db';
+    // fallback: /tmp (не сбрасывается при hot reload, сбрасывается при деплое)
+    const dir = '/tmp/dalex';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return path.join(dir, 'dalex.db');
+  }
+  const dir = path.join(__dirname, '../data');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, 'dalex.db');
+};
 
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
-}
+const DB_PATH = getDbPath();
+logger.info(`📦 DB: ${DB_PATH}`);
 
 const rawDb = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) console.error('DB connection error:', err);
+  if (err) logger.error('DB connection error', err);
 });
 
 rawDb.serialize(() => {
   rawDb.run('PRAGMA journal_mode = WAL');
   rawDb.run('PRAGMA foreign_keys = ON');
   rawDb.run('PRAGMA synchronous = NORMAL');
+  rawDb.run('PRAGMA cache_size = -8000'); // 8MB cache
 });
 
 const db = {
@@ -59,7 +70,7 @@ const db = {
 };
 
 async function initializeDatabase() {
-  const stmts = [
+  const tables = [
     `CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL,
       display_name TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
@@ -106,17 +117,43 @@ async function initializeDatabase() {
       FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL
     )`,
+    // ── Лента новостей ──
+    `CREATE TABLE IF NOT EXISTS feed_posts (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+      content TEXT NOT NULL DEFAULT '', image_data TEXT,
+      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+    `CREATE TABLE IF NOT EXISTS feed_likes (
+      id TEXT PRIMARY KEY, post_id TEXT NOT NULL, user_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (post_id) REFERENCES feed_posts(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(post_id, user_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS feed_comments (
+      id TEXT PRIMARY KEY, post_id TEXT NOT NULL, user_id TEXT NOT NULL,
+      content TEXT NOT NULL, created_at INTEGER NOT NULL,
+      FOREIGN KEY (post_id) REFERENCES feed_posts(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+    // Индексы
     `CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_rt_user ON refresh_tokens(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_cp_user ON conversation_participants(user_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_fr_receiver ON friend_requests(receiver_id, status)`
+    `CREATE INDEX IF NOT EXISTS idx_fr_receiver ON friend_requests(receiver_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_feed_posts ON feed_posts(created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_feed_likes ON feed_likes(post_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_feed_comments ON feed_comments(post_id)`
   ];
 
-  for (const stmt of stmts) {
-    await db.run(stmt).catch(() => {});
+  for (const stmt of tables) {
+    await db.run(stmt).catch(err => {
+      // Игнорируем "already exists", логируем остальное
+      if (!err.message.includes('already exists')) logger.warn('DB init warning: ' + err.message);
+    });
   }
-
-  console.log('✅ Database initialized at', DB_PATH);
+  logger.success('Database initialized');
 }
 
 module.exports = { db, initializeDatabase };

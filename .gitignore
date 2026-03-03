@@ -28,3 +28,6 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# Не пушим собранный фронтенд — он собирается на Render
+server/dist/

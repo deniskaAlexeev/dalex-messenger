@@ -264,3 +264,12 @@
   font-size: 14px;
   margin-top: 20px;
 }
+
+/* Мобильная адаптация */
+@media (max-width: 480px) {
+  .card { padding: 28px 20px; border-radius: var(--radius-lg); border: none; box-shadow: none; background: transparent; }
+  .page { padding: 16px; align-items: flex-start; padding-top: 40px; }
+  .logoTitle { font-size: 24px; }
+  .input { font-size: 16px; } /* предотвращает зум на iOS */
+  .searchInput { font-size: 16px; }
+}

@@ -1,0 +1,75 @@
+.page { display: flex; flex-direction: column; height: 100%; background: var(--bg-primary); }
+
+.header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.backBtn { color: var(--text-secondary); padding: 6px; border-radius: var(--radius-sm); transition: all var(--transition); }
+.backBtn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+
+.feed { flex: 1; overflow-y: auto; max-width: 680px; width: 100%; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+/* Composer */
+.composer { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; display: flex; gap: 12px; }
+.composerRight { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.composerInput { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 14px; color: var(--text-primary); font-size: 15px; resize: none; line-height: 1.5; width: 100%; transition: border-color var(--transition); }
+.composerInput:focus { outline: none; border-color: var(--accent); }
+.composerInput::placeholder { color: var(--text-muted); }
+.imagePreviewWrap { position: relative; display: inline-block; }
+.imagePreview { max-height: 200px; border-radius: var(--radius-md); display: block; }
+.removeImage { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.6); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.composerActions { display: flex; align-items: center; gap: 8px; }
+.composerTool { width: 34px; height: 34px; border-radius: var(--radius-sm); color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
+.composerTool:hover { color: var(--accent); background: var(--accent-dim); }
+.charCount { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.postBtn { background: var(--bg-hover); color: var(--text-muted); padding: 8px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: all var(--transition); }
+.postBtnActive { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(79,156,249,0.3); }
+.postBtnActive:hover:not(:disabled) { background: var(--accent-hover); }
+.postBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Posts */
+.post { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; animation: fadeIn 200ms ease; }
+.postHeader { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 0; }
+.postAuthor { display: flex; align-items: center; gap: 10px; text-align: left; flex: 1; transition: opacity var(--transition); }
+.postAuthor:hover { opacity: 0.8; }
+.postAuthorName { display: block; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.postMeta { display: block; font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.deleteBtn { color: var(--text-muted); padding: 6px; border-radius: var(--radius-sm); transition: all var(--transition); }
+.deleteBtn:hover { color: var(--error); background: rgba(239,68,68,0.1); }
+.postContent { font-size: 15px; color: var(--text-primary); line-height: 1.6; padding: 12px 16px; white-space: pre-wrap; word-break: break-word; }
+.postImage { width: 100%; max-height: 500px; object-fit: cover; display: block; cursor: pointer; margin-top: 4px; }
+.postActions { display: flex; gap: 4px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.actionBtn { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: var(--radius-md); font-size: 13px; color: var(--text-muted); transition: all var(--transition); }
+.actionBtn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.liked { color: #ef4444; }
+.liked:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+.active { color: var(--accent); }
+
+/* Comments */
+.comments { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.comment { display: flex; gap: 8px; align-items: flex-start; }
+.commentBody { flex: 1; background: var(--bg-tertiary); border-radius: var(--radius-md); padding: 8px 12px; }
+.commentAuthor { display: block; font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+.commentText { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.commentInput { display: flex; align-items: center; gap: 8px; }
+.commentField { flex: 1; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-full); padding: 7px 14px; color: var(--text-primary); font-size: 13px; transition: border-color var(--transition); }
+.commentField:focus { outline: none; border-color: var(--accent); }
+.commentField::placeholder { color: var(--text-muted); }
+.commentSend { width: 30px; height: 30px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all var(--transition); }
+.commentSend:hover { background: var(--accent-hover); }
+
+.loadMore { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); padding: 12px; border-radius: var(--radius-lg); font-size: 14px; transition: all var(--transition); }
+.loadMore:hover { background: var(--bg-hover); color: var(--text-primary); }
+.loadingWrap { display: flex; justify-content: center; padding: 60px; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border-light); border-top-color: var(--accent); border-radius: 50%; animation: spin 600ms linear infinite; display: block; }
+.empty { text-align: center; padding: 60px 24px; color: var(--text-muted); font-size: 15px; }
+.emptyHint { font-size: 13px; margin-top: 6px; }
+
+@media (max-width: 768px) {
+  .feed { padding: 10px; }
+  .composer { padding: 12px; }
+  .composerInput { font-size: 16px; }
+  .commentField { font-size: 16px; }
+}

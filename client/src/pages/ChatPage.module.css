@@ -1,8 +1,13 @@
 .app {
   display: flex;
   height: 100vh;
+  height: -webkit-fill-available;
   overflow: hidden;
-  position: relative;
+}
+
+.sidebarWrap {
+  flex-shrink: 0;
+  width: var(--sidebar-width);
 }
 
 .main {
@@ -36,6 +41,7 @@
   position: relative;
   z-index: 1;
   animation: fadeIn 300ms ease;
+  padding: 24px;
 }
 
 .emptyIcon {
@@ -64,4 +70,26 @@
   font-size: 14px;
   color: var(--text-muted);
   max-width: 280px;
+  margin: 0 auto;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .sidebarWrap {
+    width: 100vw;
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+  }
+
+  .main {
+    width: 100vw;
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+  }
+
+  .hideMobile {
+    display: none !important;
+  }
 }

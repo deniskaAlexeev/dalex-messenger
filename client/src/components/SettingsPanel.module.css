@@ -175,3 +175,9 @@
   color: var(--text-muted);
   line-height: 1.6;
 }
+
+@media (max-width: 768px) {
+  .panel { width: 100vw; border-left: none; }
+  .input { font-size: 16px; }
+  .textarea { font-size: 16px; }
+}
