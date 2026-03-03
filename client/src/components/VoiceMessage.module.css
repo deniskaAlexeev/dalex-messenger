@@ -1,0 +1,33 @@
+.voice {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; min-width: 200px; max-width: 280px;
+}
+
+.playBtn { font-size: 22px; cursor: pointer; line-height: 1; flex-shrink: 0; background: none; border: none; }
+
+.waveWrap { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+
+.progressBar {
+  height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;
+  position: relative; cursor: pointer;
+}
+.voiceMine .progressBar { background: rgba(255,255,255,0.25); }
+
+.progressFill { height: 100%; background: rgba(255,255,255,0.8); border-radius: 2px; transition: width 100ms linear; }
+.voiceMine .progressFill { background: white; }
+
+.progressDot {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  transition: left 100ms linear;
+}
+
+.duration { font-size: 11px; color: rgba(255,255,255,0.6); font-family: var(--font-mono); }
+.voiceMine .duration { color: rgba(255,255,255,0.7); }
+
+/* Для не-своих сообщений */
+:not(.voiceMine) .progressBar { background: var(--border-light); }
+:not(.voiceMine) .progressFill { background: var(--accent); }
+:not(.voiceMine) .progressDot { background: var(--accent); }
+:not(.voiceMine) .duration { color: var(--text-muted); }

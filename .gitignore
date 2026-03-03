@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.npm
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+client/dist/
+server/data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Не пушим собранный фронтенд — он собирается на Render
+server/dist/

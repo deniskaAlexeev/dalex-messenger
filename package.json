@@ -1,0 +1,17 @@
+{
+  "name": "dalex-messenger",
+  "version": "1.0.0",
+  "description": "ДАЛЕКС - мессенджер. Разработчик: Денис Алексеев",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npx nodemon index.js",
+    "dev:client": "cd client && npx vite",
+    "build": "cd client && npx vite build",
+    "start": "cd server && node index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

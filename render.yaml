@@ -1,0 +1,33 @@
+# Конфигурация деплоя ДАЛЕКС на Render.com
+# Render видит этот файл и настраивает всё автоматически
+
+services:
+  - type: web
+    name: dalex-messenger
+    runtime: node
+    region: frankfurt
+    plan: free
+
+    buildCommand: cd server && npm install && cd ../client && npm install && npm run build && cp -r dist ../server/dist
+
+    startCommand: node server/index.js
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CLIENT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+    healthCheckPath: /api/health
+
+    # Постоянный диск — сюда пишем SQLite БД, он НЕ сбрасывается при деплое
+    disk:
+      name: dalex-db
+      mountPath: /data
+      sizeGB: 1

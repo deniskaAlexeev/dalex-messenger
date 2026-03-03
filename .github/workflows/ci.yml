@@ -1,0 +1,43 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 Install server deps
+        run: cd server && npm install
+
+      - name: 📦 Install client deps
+        run: cd client && npm install
+
+      - name: 🔨 Build client
+        run: cd client && npm run build
+
+      - name: ✅ Verify build
+        run: ls -la client/dist/
+
+      - name: 🚀 Deploy to Railway
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          if [ -n "${{ secrets.RAILWAY_TOKEN }}" ]; then
+            npm install -g @railway/cli
+            railway up --service dalex-messenger
+          else
+            echo "⚠️ RAILWAY_TOKEN не задан — Railway задеплоит сам при push"
+          fi
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

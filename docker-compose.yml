@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  dalex:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change_me_in_production_min_32_chars}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change_refresh_in_production_32chars}
+      - CLIENT_URL=http://localhost:3001
+    volumes:
+      - dalex_data:/app/server/data
+    restart: unless-stopped
+
+volumes:
+  dalex_data:
