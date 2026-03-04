@@ -1,0 +1,96 @@
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  align-items: center;
+}
+.wrapMine { justify-content: flex-end; }
+
+/* Реакция-бейдж */
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  animation: reactionPop 320ms var(--ease-spring) both;
+}
+.badge:hover { background: var(--bg-active); border-color: var(--accent); transform: scale(1.1) !important; }
+.badge:active { transform: scale(0.95) !important; }
+
+/* Моя реакция — подсвечена */
+.badgeMine {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cnt { font-size: 11px; font-weight: 600; line-height: 1; }
+
+/* Кнопка + */
+.addWrap { position: relative; }
+
+.addBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-light);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Показываем + при наведении на строку сообщения — через parent hover */
+:global(.msgRow:hover) .addBtn,
+.addBtnActive {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.addBtn:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.addBtnActive { opacity: 1; pointer-events: auto; background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+/* Если уже есть реакции — кнопка всегда видна */
+.addBtnHidden { opacity: 0; pointer-events: none; }
+:global(.msgRow:hover) .addBtnHidden { opacity: 1; pointer-events: auto; }
+
+/* Пикер */
+.picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  display: flex;
+  gap: 2px;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  white-space: nowrap;
+}
+
+.pickerEmoji {
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  line-height: 1;
+}
+.pickerEmoji:hover { background: var(--bg-hover); transform: scale(1.25) !important; }

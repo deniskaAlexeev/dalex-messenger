@@ -55,11 +55,20 @@
 .editedMark { font-size: 11px; color: rgba(255,255,255,0.4); }
 .bubble:not(.bubbleMine) .editedMark { color: var(--text-muted); }
 
-.typingIndicator { display: flex; align-items: center; gap: 8px; padding: 4px 0; color: var(--text-muted); font-size: 13px; }
-.typingDots { display: flex; gap: 3px; align-items: center; }
-.typingDots span { width: 5px; height: 5px; background: var(--text-muted); border-radius: 50%; animation: pulse 1.2s ease infinite; }
-.typingDots span:nth-child(2) { animation-delay: 0.2s; }
-.typingDots span:nth-child(3) { animation-delay: 0.4s; }
+.typingIndicator {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: var(--bg-tertiary); border-radius: 16px 16px 16px 4px;
+  align-self: flex-start; margin-top: 4px;
+  animation: fadeUp 200ms var(--ease-out) both;
+  width: fit-content;
+}
+.typingDots { display: flex; gap: 4px; align-items: center; }
+.typingDots span {
+  width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%;
+  animation: typingBounce 1.1s ease infinite;
+}
+.typingDots span:nth-child(2) { animation-delay: 0.15s; }
+.typingDots span:nth-child(3) { animation-delay: 0.30s; }
 
 .scrollBtn { position: absolute; bottom: 90px; right: 16px; width: 36px; height: 36px; background: var(--bg-tertiary); border: 1px solid var(--border-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); box-shadow: var(--shadow-md); transition: all var(--transition); z-index: 10; }
 .scrollBtn:hover { background: var(--accent); border-color: var(--accent); color: white; }

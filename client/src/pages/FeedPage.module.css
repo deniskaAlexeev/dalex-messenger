@@ -30,7 +30,15 @@
 .postBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Posts */
-.post { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; animation: fadeIn 200ms ease; }
+.post {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  animation: fadeUp 280ms var(--ease-out) both;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.post:hover { border-color: var(--border-light); box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
 .postHeader { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 0; }
 .postAuthor { display: flex; align-items: center; gap: 10px; text-align: left; flex: 1; transition: opacity var(--transition); }
 .postAuthor:hover { opacity: 0.8; }
@@ -45,6 +53,7 @@
 .actionBtn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .liked { color: #ef4444; }
 .liked:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+.liked svg { animation: heartbeat 400ms var(--ease-spring) both; }
 .active { color: var(--accent); }
 
 /* Comments */

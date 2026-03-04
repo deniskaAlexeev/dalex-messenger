@@ -137,6 +137,13 @@ async function initializeDatabase() {
       FOREIGN KEY (post_id) REFERENCES feed_posts(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`,
+    `CREATE TABLE IF NOT EXISTS message_reactions (
+      id TEXT PRIMARY KEY, message_id TEXT NOT NULL,
+      user_id TEXT NOT NULL, emoji TEXT NOT NULL, created_at INTEGER NOT NULL,
+      FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(message_id, user_id)
+    )`,
     // Индексы
     `CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_rt_user ON refresh_tokens(user_id)`,
@@ -144,7 +151,8 @@ async function initializeDatabase() {
     `CREATE INDEX IF NOT EXISTS idx_fr_receiver ON friend_requests(receiver_id, status)`,
     `CREATE INDEX IF NOT EXISTS idx_feed_posts ON feed_posts(created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_feed_likes ON feed_likes(post_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_feed_comments ON feed_comments(post_id)`
+    `CREATE INDEX IF NOT EXISTS idx_feed_comments ON feed_comments(post_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_reactions_msg ON message_reactions(message_id)`
   ];
 
   for (const stmt of tables) {

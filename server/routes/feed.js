@@ -5,12 +5,27 @@ const { db } = require('../db/database');
 const { authenticateToken } = require('../middleware/auth');
 const logger = require('../logger');
 
-// GET /api/feed — лента постов (с пагинацией)
+const FEED_MAX = 15;
+
+// Удаляет посты старше 15-го — вызывается после каждой публикации
+async function trimFeed() {
+  try {
+    const old = await db.all(
+      'SELECT id FROM feed_posts ORDER BY created_at DESC LIMIT -1 OFFSET ?',
+      [FEED_MAX]
+    );
+    for (const row of old) {
+      await db.run('DELETE FROM feed_posts WHERE id = ?', [row.id]);
+    }
+    if (old.length > 0) logger.info(`Feed trimmed: removed ${old.length} old post(s)`);
+  } catch (err) {
+    logger.error('trimFeed error', err);
+  }
+}
+
+// GET /api/feed
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-    const before = req.query.before ? parseInt(req.query.before) : Date.now() + 1000;
-
     const posts = await db.all(`
       SELECT fp.id, fp.user_id, fp.content, fp.image_data, fp.created_at, fp.updated_at,
         u.username, u.display_name, u.avatar_color,
@@ -19,10 +34,9 @@ router.get('/', authenticateToken, async (req, res) => {
         (SELECT COUNT(*) FROM feed_likes fl2 WHERE fl2.post_id = fp.id AND fl2.user_id = ?) as liked_by_me
       FROM feed_posts fp
       JOIN users u ON u.id = fp.user_id
-      WHERE fp.created_at < ?
       ORDER BY fp.created_at DESC
       LIMIT ?
-    `, [req.user.id, before, limit]);
+    `, [req.user.id, FEED_MAX]);
 
     res.json(posts.map(p => ({ ...p, liked_by_me: p.liked_by_me > 0 })));
   } catch (err) {
@@ -61,3 +75,4 @@ router.delete('/:postId', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.trimFeed = trimFeed;

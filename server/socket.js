@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const { db } = require('./db/database');
 const { authenticateSocket } = require('./middleware/auth');
 const logger = require('./logger');
+const { trimFeed } = require('./routes/feed');
 
 const onlineUsers = new Map();
 
@@ -88,6 +89,59 @@ module.exports = (io) => {
       } catch (err) {
         logger.error('message:send error', err);
         callback?.({ error: 'Ошибка сервера: ' + err.message });
+      }
+    });
+
+    // ─── РЕАКЦИИ НА СООБЩЕНИЯ ─────────────────────────────────────────────
+    socket.on('message:react', async ({ conversationId, messageId, emoji }, callback) => {
+      try {
+        if (!emoji) return callback?.({ error: 'Укажите эмодзи' });
+
+        const participant = await db.get(
+          'SELECT id FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
+          [conversationId, userId]
+        );
+        if (!participant) return callback?.({ error: 'Нет доступа' });
+
+        const existing = await db.get(
+          'SELECT id, emoji FROM message_reactions WHERE message_id = ? AND user_id = ?',
+          [messageId, userId]
+        );
+
+        if (existing) {
+          if (existing.emoji === emoji) {
+            // Убираем реакцию (повторный клик)
+            await db.run('DELETE FROM message_reactions WHERE id = ?', [existing.id]);
+          } else {
+            // Меняем на другую
+            await db.run('UPDATE message_reactions SET emoji = ?, created_at = ? WHERE id = ?',
+              [emoji, Date.now(), existing.id]);
+          }
+        } else {
+          await db.run(
+            'INSERT INTO message_reactions (id, message_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?, ?)',
+            [uuidv4(), messageId, userId, emoji, Date.now()]
+          );
+        }
+
+        // Отдаём сгруппированные реакции: { "❤️": ["uid1","uid2"], "😂": ["uid3"] }
+        const all = await db.all(
+          'SELECT emoji, user_id FROM message_reactions WHERE message_id = ?',
+          [messageId]
+        );
+        const grouped = {};
+        for (const r of all) {
+          if (!grouped[r.emoji]) grouped[r.emoji] = [];
+          grouped[r.emoji].push(r.user_id);
+        }
+
+        io.to(`conv:${conversationId}`).emit('message:reactions_update', {
+          messageId, conversationId, reactions: grouped
+        });
+        callback?.({ success: true, reactions: grouped });
+      } catch (err) {
+        logger.error('message:react error', err);
+        callback?.({ error: 'Ошибка сервера' });
       }
     });
 
@@ -180,6 +234,9 @@ module.exports = (io) => {
           'INSERT INTO feed_posts (id, user_id, content, image_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
           [postId, userId, content?.trim() || '', finalImage, now, now]
         );
+
+        // Удаляем посты сверх лимита 15
+        await trimFeed();
 
         const author = await db.get(
           'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?',

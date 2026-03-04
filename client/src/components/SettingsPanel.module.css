@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   z-index: 100;
-  animation: slideIn 200ms ease forwards;
+  animation: slideInRight 280ms var(--ease-out) both;
   box-shadow: -8px 0 32px rgba(0,0,0,0.4);
 }
 

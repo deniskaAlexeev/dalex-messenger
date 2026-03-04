@@ -10,6 +10,7 @@ import EmojiPicker from './EmojiPicker';
 import VoiceRecorder from './VoiceRecorder';
 import VoiceMessage from './VoiceMessage';
 import UserProfile from './UserProfile';
+import MessageReactions from './MessageReactions';
 import api from '../utils/api';
 import styles from './ChatWindow.module.css';
 
@@ -27,6 +28,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [viewProfileId, setViewProfileId] = useState(null);
+  const [reactions, setReactions] = useState({}); // { messageId: { "❤️": ["uid1"] } }
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -47,6 +49,15 @@ const ChatWindow = ({ conversationId, onBack }) => {
       setTimeout(() => scrollToBottom(false), 50);
     });
     setText(''); setReplyTo(null); setEditingMsg(null); setShowEmoji(false);
+    setReactions({});
+
+    // Слушаем обновления реакций
+    const socket = getSocket();
+    const onReactionsUpdate = ({ messageId, reactions: r }) => {
+      setReactions(prev => ({ ...prev, [messageId]: r }));
+    };
+    socket?.on('message:reactions_update', onReactionsUpdate);
+    return () => socket?.off('message:reactions_update', onReactionsUpdate);
   }, [conversationId]);
 
   const prevMsgCount = useRef(0);
@@ -238,7 +249,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
           return (
             <div
               key={msg.id}
-              className={`${styles.msgRow} ${isMine ? styles.msgRowMine : ''} message-in`}
+              className={`${styles.msgRow} ${isMine ? styles.msgRowMine : ''} message-in msgRow`}
               onContextMenu={e => !msg.is_deleted && handleContextMenu(e, msg)}
               onTouchStart={e => handleTouchStart(e, msg)}
               onTouchEnd={handleTouchEnd}
@@ -284,6 +295,14 @@ const ChatWindow = ({ conversationId, onBack }) => {
                     </div>
                   )}
                 </div>
+                {!msg.is_deleted && (
+                  <MessageReactions
+                    messageId={msg.id}
+                    conversationId={conversationId}
+                    reactions={reactions[msg.id] || {}}
+                    isMine={isMine}
+                  />
+                )}
               </div>
             </div>
           );
