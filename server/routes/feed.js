@@ -51,8 +51,7 @@ router.get('/:postId/comments', authenticateToken, async (req, res) => {
     const comments = await db.all(`
       SELECT fc.id, fc.content, fc.created_at, u.id as user_id, u.username, u.display_name, u.avatar_color
       FROM feed_comments fc JOIN users u ON u.id = fc.user_id
-      WHERE fc.post_id = ?
-      ORDER BY fc.created_at ASC
+      WHERE fc.post_id = ? ORDER BY fc.created_at ASC
     `, [req.params.postId]);
     res.json(comments);
   } catch (err) {
@@ -61,7 +60,7 @@ router.get('/:postId/comments', authenticateToken, async (req, res) => {
   }
 });
 
-// DELETE /api/feed/:postId — удалить свой пост
+// DELETE /api/feed/:postId
 router.delete('/:postId', authenticateToken, async (req, res) => {
   try {
     const post = await db.get('SELECT id FROM feed_posts WHERE id = ? AND user_id = ?', [req.params.postId, req.user.id]);

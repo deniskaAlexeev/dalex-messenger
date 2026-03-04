@@ -31,7 +31,6 @@ module.exports = (io) => {
       try {
         const { conversationId, content, replyToId, messageType = 'text' } = data;
 
-        // Валидация
         if (!content) return callback?.({ error: 'Пустое сообщение' });
         if (messageType === 'text' && !content.trim()) return callback?.({ error: 'Пустое сообщение' });
         if (content.length > 15 * 1024 * 1024) return callback?.({ error: 'Сообщение слишком большое' });
@@ -75,6 +74,7 @@ module.exports = (io) => {
           reply_to: replyTo,
           is_edited: 0,
           is_deleted: 0,
+          reactions: {},
           created_at: now,
           updated_at: now,
           username: sender.username,
@@ -84,6 +84,33 @@ module.exports = (io) => {
 
         io.to(`conv:${conversationId}`).emit('message:new', message);
         callback?.({ success: true, message });
+
+        // ── Push-уведомление другим участникам ──
+        const participants = await db.all(
+          'SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id != ?',
+          [conversationId, userId]
+        );
+
+        const conv = await db.get('SELECT type, name FROM conversations WHERE id = ?', [conversationId]);
+        const notifTitle = conv.type === 'group'
+          ? `${conv.name || 'Группа'}`
+          : sender.display_name;
+        const notifBody = messageType === 'image' ? '📷 Фото'
+          : messageType === 'voice' ? '🎤 Голосовое'
+          : finalContent.length > 80 ? finalContent.slice(0, 80) + '...'
+          : finalContent;
+
+        for (const p of participants) {
+          // Если пользователь не онлайн или не смотрит на этот чат — шлём push
+          io.to(`user:${p.user_id}`).emit('push:notification', {
+            conversationId,
+            title: notifTitle,
+            body: notifBody,
+            senderName: sender.display_name,
+            avatarColor: sender.avatar_color,
+            messageType
+          });
+        }
 
         logger.info(`MSG [${messageType}] from ${username} in conv ${conversationId}`);
       } catch (err) {
@@ -110,10 +137,8 @@ module.exports = (io) => {
 
         if (existing) {
           if (existing.emoji === emoji) {
-            // Убираем реакцию (повторный клик)
             await db.run('DELETE FROM message_reactions WHERE id = ?', [existing.id]);
           } else {
-            // Меняем на другую
             await db.run('UPDATE message_reactions SET emoji = ?, created_at = ? WHERE id = ?',
               [emoji, Date.now(), existing.id]);
           }
@@ -124,7 +149,6 @@ module.exports = (io) => {
           );
         }
 
-        // Отдаём сгруппированные реакции: { "❤️": ["uid1","uid2"], "😂": ["uid3"] }
         const all = await db.all(
           'SELECT emoji, user_id FROM message_reactions WHERE message_id = ?',
           [messageId]
@@ -164,7 +188,7 @@ module.exports = (io) => {
       socket.to(`conv:${conversationId}`).emit('messages:read', { userId, conversationId, at: now });
     });
 
-    // ─── РЕДАКТИРОВАТЬ СООБЩЕНИЕ ──────────────────────────────────────────
+    // ─── РЕДАКТИРОВАТЬ ────────────────────────────────────────────────────
     socket.on('message:edit', async ({ conversationId, messageId, content }, callback) => {
       try {
         if (!content?.trim()) return callback?.({ error: 'Пустое содержимое' });
@@ -173,12 +197,9 @@ module.exports = (io) => {
           [messageId, userId, 'text']
         );
         if (!msg) return callback?.({ error: 'Сообщение не найдено' });
-
         const now = Date.now();
-        await db.run(
-          'UPDATE messages SET content = ?, is_edited = 1, updated_at = ? WHERE id = ?',
-          [content.trim(), now, messageId]
-        );
+        await db.run('UPDATE messages SET content = ?, is_edited = 1, updated_at = ? WHERE id = ?',
+          [content.trim(), now, messageId]);
         io.to(`conv:${conversationId}`).emit('message:edited', {
           messageId, conversationId, content: content.trim(), updatedAt: now
         });
@@ -189,15 +210,11 @@ module.exports = (io) => {
       }
     });
 
-    // ─── УДАЛИТЬ СООБЩЕНИЕ ────────────────────────────────────────────────
+    // ─── УДАЛИТЬ ─────────────────────────────────────────────────────────
     socket.on('message:delete', async ({ conversationId, messageId }, callback) => {
       try {
-        const msg = await db.get(
-          'SELECT * FROM messages WHERE id = ? AND sender_id = ?',
-          [messageId, userId]
-        );
+        const msg = await db.get('SELECT * FROM messages WHERE id = ? AND sender_id = ?', [messageId, userId]);
         if (!msg) return callback?.({ error: 'Сообщение не найдено' });
-
         await db.run(
           'UPDATE messages SET is_deleted = 1, content = ?, updated_at = ? WHERE id = ?',
           ['Сообщение удалено', Date.now(), messageId]
@@ -219,7 +236,7 @@ module.exports = (io) => {
       if (p) socket.join(`conv:${conversationId}`);
     });
 
-    // ─── НОВЫЙ ПОСТ В ЛЕНТУ ───────────────────────────────────────────────
+    // ─── НОВЫЙ ПОСТ ───────────────────────────────────────────────────────
     socket.on('feed:post', async (data, callback) => {
       try {
         const { content, imageData } = data;
@@ -239,21 +256,14 @@ module.exports = (io) => {
         await trimFeed();
 
         const author = await db.get(
-          'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?',
-          [userId]
+          'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?', [userId]
         );
 
         const post = {
-          id: postId,
-          user_id: userId,
-          content: content?.trim() || '',
-          image_data: finalImage,
-          likes_count: 0,
-          comments_count: 0,
-          liked_by_me: false,
-          created_at: now,
-          updated_at: now,
-          author
+          id: postId, user_id: userId,
+          content: content?.trim() || '', image_data: finalImage,
+          likes_count: 0, comments_count: 0, liked_by_me: false,
+          created_at: now, updated_at: now, author
         };
 
         io.emit('feed:new_post', post);
@@ -265,25 +275,20 @@ module.exports = (io) => {
       }
     });
 
-    // ─── ЛАЙК ПОСТА ──────────────────────────────────────────────────────
+    // ─── ЛАЙК ────────────────────────────────────────────────────────────
     socket.on('feed:like', async ({ postId }, callback) => {
       try {
-        const existing = await db.get(
-          'SELECT id FROM feed_likes WHERE post_id = ? AND user_id = ?',
-          [postId, userId]
-        );
+        const existing = await db.get('SELECT id FROM feed_likes WHERE post_id = ? AND user_id = ?', [postId, userId]);
         if (existing) {
           await db.run('DELETE FROM feed_likes WHERE post_id = ? AND user_id = ?', [postId, userId]);
           const row = await db.get('SELECT COUNT(*) as cnt FROM feed_likes WHERE post_id = ?', [postId]);
-          io.emit('feed:like_update', { postId, likes_count: row.cnt, liked_by: userId, action: 'unlike' });
+          io.emit('feed:like_update', { postId, likes_count: row.cnt, action: 'unlike' });
           callback?.({ liked: false, likes_count: row.cnt });
         } else {
-          await db.run(
-            'INSERT INTO feed_likes (id, post_id, user_id, created_at) VALUES (?, ?, ?, ?)',
-            [uuidv4(), postId, userId, Date.now()]
-          );
+          await db.run('INSERT INTO feed_likes (id, post_id, user_id, created_at) VALUES (?, ?, ?, ?)',
+            [uuidv4(), postId, userId, Date.now()]);
           const row = await db.get('SELECT COUNT(*) as cnt FROM feed_likes WHERE post_id = ?', [postId]);
-          io.emit('feed:like_update', { postId, likes_count: row.cnt, liked_by: userId, action: 'like' });
+          io.emit('feed:like_update', { postId, likes_count: row.cnt, action: 'like' });
           callback?.({ liked: true, likes_count: row.cnt });
         }
       } catch (err) {
@@ -303,8 +308,7 @@ module.exports = (io) => {
           [commentId, postId, userId, content.trim(), now]
         );
         const author = await db.get(
-          'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?',
-          [userId]
+          'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?', [userId]
         );
         const row = await db.get('SELECT COUNT(*) as cnt FROM feed_comments WHERE post_id = ?', [postId]);
         const comment = { id: commentId, post_id: postId, content: content.trim(), created_at: now, author };
@@ -333,5 +337,13 @@ module.exports = (io) => {
       }
       logger.info(`SOCKET disconnected: ${username}`);
     });
+  });
+
+  // Каждый пользователь присоединяется к личной комнате для push-уведомлений
+  io.use((socket, next) => {
+    socket.on('user:join_room', () => {
+      socket.join(`user:${socket.user?.id}`);
+    });
+    next();
   });
 };

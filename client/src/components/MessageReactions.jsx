@@ -26,7 +26,6 @@ const MessageReactions = ({ messageId, conversationId, reactions = {}, isMine })
 
   return (
     <div className={`${styles.wrap} ${isMine ? styles.wrapMine : ''}`}>
-      {/* Существующие реакции */}
       {Object.entries(reactions).map(([emoji, userIds]) => {
         const mine = userIds.includes(user?.id);
         return (
@@ -36,16 +35,15 @@ const MessageReactions = ({ messageId, conversationId, reactions = {}, isMine })
             onClick={() => react(emoji)}
             title={`${userIds.length}`}
           >
-            <span>{emoji}</span>
+            <span className={styles.emoji}>{emoji}</span>
             <span className={styles.cnt}>{userIds.length}</span>
           </button>
         );
       })}
 
-      {/* Кнопка + реакция */}
       <div className={styles.addWrap} ref={ref}>
         <button
-          className={`${styles.addBtn} ${showPicker ? styles.addBtnActive : ''} ${!hasAny ? styles.addBtnHidden : ''}`}
+          className={`${styles.addBtn} ${showPicker ? styles.addBtnActive : ''}`}
           onClick={() => setShowPicker(v => !v)}
           title="Добавить реакцию"
         >

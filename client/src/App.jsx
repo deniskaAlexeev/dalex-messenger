@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import useAuthStore from './hooks/useAuthStore';
+import PushNotification from './components/PushNotification';
 import AuthPage from './pages/AuthPage';
 import ChatPage from './pages/ChatPage';
 
@@ -54,6 +55,10 @@ function App() {
 
   useEffect(() => {
     initialize();
+    // Запрашиваем разрешение на уведомления браузера
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   return (
@@ -90,6 +95,7 @@ function App() {
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <PushNotification />
     </BrowserRouter>
   );
 }

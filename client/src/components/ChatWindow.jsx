@@ -28,7 +28,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [viewProfileId, setViewProfileId] = useState(null);
-  const [reactions, setReactions] = useState({}); // { messageId: { "❤️": ["uid1"] } }
+  const [reactions, setReactions] = useState({});
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -51,7 +51,6 @@ const ChatWindow = ({ conversationId, onBack }) => {
     setText(''); setReplyTo(null); setEditingMsg(null); setShowEmoji(false);
     setReactions({});
 
-    // Слушаем обновления реакций
     const socket = getSocket();
     const onReactionsUpdate = ({ messageId, reactions: r }) => {
       setReactions(prev => ({ ...prev, [messageId]: r }));

@@ -1,4 +1,4 @@
-.panel { position: fixed; top: 0; right: 0; width: 360px; height: 100vh; background: var(--bg-secondary); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; animation: slideInRight 280ms var(--ease-out) both; box-shadow: -8px 0 40px rgba(0,0,0,0.5); }
+.panel { position: fixed; top: 0; right: 0; width: 360px; height: 100vh; background: var(--bg-secondary); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; animation: slideIn 200ms ease forwards; box-shadow: -8px 0 32px rgba(0,0,0,0.4); }
 .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
 .title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
 .closeBtn { color: var(--text-muted); padding: 6px; border-radius: var(--radius-sm); transition: all var(--transition); }
