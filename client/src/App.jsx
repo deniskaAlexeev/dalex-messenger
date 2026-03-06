@@ -59,6 +59,9 @@ function App() {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+    // Восстанавливаем тему из localStorage
+    const savedTheme = localStorage.getItem('dalex_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Search, Users, Settings, LogOut, MessageSquare, Newspaper } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../hooks/useAuthStore';
@@ -14,21 +14,26 @@ const Sidebar = ({ onOpenSettings, onOpenFriends, onOpenFeed, onSelectConversati
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeout = useRef(null);
 
   const handleLogout = async () => {
     await logout();
     toast.success('Вы вышли из аккаунта');
   };
 
-  const handleSearch = async (q) => {
+  const handleSearch = (q) => {
     setSearch(q);
+    clearTimeout(searchTimeout.current);
     if (q.trim().length < 2) { setSearchResults([]); return; }
-    setSearchLoading(true);
-    try {
-      const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
-      setSearchResults(data);
-    } catch { setSearchResults([]); }
-    finally { setSearchLoading(false); }
+    // ✅ ОПТ-3: debounce 300ms — не шлём запрос на каждую букву
+    searchTimeout.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
+        setSearchResults(data);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    }, 300);
   };
 
   const handleOpenChat = async (userId) => {

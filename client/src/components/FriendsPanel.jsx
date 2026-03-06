@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { UserPlus, UserX, X, Check, Clock, Search, Users, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../hooks/useAuthStore';
@@ -17,16 +17,21 @@ const FriendsPanel = ({ onClose, onOpenChat }) => {
   const [groupName, setGroupName] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
+  const searchTimeout = useRef(null);
 
   useEffect(() => { fetchFriends(); fetchFriendRequests(); }, []);
 
-  const handleSearch = async (q) => {
+  const handleSearch = (q) => {
     setSearchQuery(q);
+    clearTimeout(searchTimeout.current);
     if (q.trim().length < 2) { setSearchResults([]); return; }
-    try {
-      const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
-      setSearchResults(data);
-    } catch {}
+    // ✅ ОПТ-3: debounce 300ms
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const { data } = await api.get(`/users/search?q=${encodeURIComponent(q)}`);
+        setSearchResults(data);
+      } catch {}
+    }, 300);
   };
 
   const sendRequest = async (userId) => {

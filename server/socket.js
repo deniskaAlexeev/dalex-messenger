@@ -6,12 +6,28 @@ const { trimFeed } = require('./routes/feed');
 
 const onlineUsers = new Map();
 
+// ✅ БАГ-7: Rate limiter для сообщений (Map живёт на уровне модуля)
+const msgRateLimit = new Map();
+
+function checkMsgRate(userId) {
+  const now = Date.now();
+  const rl = msgRateLimit.get(userId) || { count: 0, resetAt: now + 10000 };
+  if (now > rl.resetAt) { rl.count = 0; rl.resetAt = now + 10000; }
+  rl.count++;
+  msgRateLimit.set(userId, rl);
+  return rl.count <= 20; // max 20 сообщений за 10 сек
+}
+
 module.exports = (io) => {
   io.use(authenticateSocket);
 
   io.on('connection', async (socket) => {
     const userId = socket.user.id;
     const username = socket.user.username;
+
+    // ✅ БАГ-2: user:join_room ВНУТРИ connection-хендлера
+    socket.join(`user:${userId}`);
+    socket.on('user:join_room', () => socket.join(`user:${userId}`));
 
     if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
     onlineUsers.get(userId).add(socket.id);
@@ -28,6 +44,11 @@ module.exports = (io) => {
 
     // ─── ОТПРАВКА СООБЩЕНИЯ ───────────────────────────────────────────────
     socket.on('message:send', async (data, callback) => {
+      // ✅ БАГ-7: проверка rate limit
+      if (!checkMsgRate(userId)) {
+        return callback?.({ error: 'Слишком много сообщений. Подождите немного.' });
+      }
+
       try {
         const { conversationId, content, replyToId, messageType = 'text' } = data;
 
@@ -85,23 +106,18 @@ module.exports = (io) => {
         io.to(`conv:${conversationId}`).emit('message:new', message);
         callback?.({ success: true, message });
 
-        // ── Push-уведомление другим участникам ──
+        // Push-уведомление другим участникам
         const participants = await db.all(
           'SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id != ?',
           [conversationId, userId]
         );
-
         const conv = await db.get('SELECT type, name FROM conversations WHERE id = ?', [conversationId]);
-        const notifTitle = conv.type === 'group'
-          ? `${conv.name || 'Группа'}`
-          : sender.display_name;
+        const notifTitle = conv.type === 'group' ? (conv.name || 'Группа') : sender.display_name;
         const notifBody = messageType === 'image' ? '📷 Фото'
           : messageType === 'voice' ? '🎤 Голосовое'
-          : finalContent.length > 80 ? finalContent.slice(0, 80) + '...'
-          : finalContent;
+          : finalContent.length > 80 ? finalContent.slice(0, 80) + '...' : finalContent;
 
         for (const p of participants) {
-          // Если пользователь не онлайн или не смотрит на этот чат — шлём push
           io.to(`user:${p.user_id}`).emit('push:notification', {
             conversationId,
             title: notifTitle,
@@ -119,7 +135,7 @@ module.exports = (io) => {
       }
     });
 
-    // ─── РЕАКЦИИ НА СООБЩЕНИЯ ─────────────────────────────────────────────
+    // ─── РЕАКЦИИ ─────────────────────────────────────────────────────────
     socket.on('message:react', async ({ conversationId, messageId, emoji }, callback) => {
       try {
         if (!emoji) return callback?.({ error: 'Укажите эмодзи' });
@@ -227,7 +243,7 @@ module.exports = (io) => {
       }
     });
 
-    // ─── ПРИСОЕДИНИТЬСЯ К КОМНАТЕ ─────────────────────────────────────────
+    // ─── ВОЙТИ В КОМНАТУ ──────────────────────────────────────────────────
     socket.on('conversation:join', async ({ conversationId }) => {
       const p = await db.get(
         'SELECT id FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
@@ -236,7 +252,7 @@ module.exports = (io) => {
       if (p) socket.join(`conv:${conversationId}`);
     });
 
-    // ─── НОВЫЙ ПОСТ ───────────────────────────────────────────────────────
+    // ─── ЛЕНТА: НОВЫЙ ПОСТ ────────────────────────────────────────────────
     socket.on('feed:post', async (data, callback) => {
       try {
         const { content, imageData } = data;
@@ -245,23 +261,16 @@ module.exports = (io) => {
 
         const now = Date.now();
         const postId = uuidv4();
-        const finalImage = imageData || null;
-
         await db.run(
           'INSERT INTO feed_posts (id, user_id, content, image_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-          [postId, userId, content?.trim() || '', finalImage, now, now]
+          [postId, userId, content?.trim() || '', imageData || null, now, now]
         );
-
-        // Удаляем посты сверх лимита 15
         await trimFeed();
 
-        const author = await db.get(
-          'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?', [userId]
-        );
-
+        const author = await db.get('SELECT id, username, display_name, avatar_color FROM users WHERE id = ?', [userId]);
         const post = {
           id: postId, user_id: userId,
-          content: content?.trim() || '', image_data: finalImage,
+          content: content?.trim() || '', image_data: imageData || null,
           likes_count: 0, comments_count: 0, liked_by_me: false,
           created_at: now, updated_at: now, author
         };
@@ -275,7 +284,7 @@ module.exports = (io) => {
       }
     });
 
-    // ─── ЛАЙК ────────────────────────────────────────────────────────────
+    // ─── ЛЕНТА: ЛАЙК ─────────────────────────────────────────────────────
     socket.on('feed:like', async ({ postId }, callback) => {
       try {
         const existing = await db.get('SELECT id FROM feed_likes WHERE post_id = ? AND user_id = ?', [postId, userId]);
@@ -297,7 +306,7 @@ module.exports = (io) => {
       }
     });
 
-    // ─── КОММЕНТАРИЙ ─────────────────────────────────────────────────────
+    // ─── ЛЕНТА: КОММЕНТАРИЙ ───────────────────────────────────────────────
     socket.on('feed:comment', async ({ postId, content }, callback) => {
       try {
         if (!content?.trim()) return callback?.({ error: 'Пустой комментарий' });
@@ -307,9 +316,7 @@ module.exports = (io) => {
           'INSERT INTO feed_comments (id, post_id, user_id, content, created_at) VALUES (?, ?, ?, ?, ?)',
           [commentId, postId, userId, content.trim(), now]
         );
-        const author = await db.get(
-          'SELECT id, username, display_name, avatar_color FROM users WHERE id = ?', [userId]
-        );
+        const author = await db.get('SELECT id, username, display_name, avatar_color FROM users WHERE id = ?', [userId]);
         const row = await db.get('SELECT COUNT(*) as cnt FROM feed_comments WHERE post_id = ?', [postId]);
         const comment = { id: commentId, post_id: postId, content: content.trim(), created_at: now, author };
         io.emit('feed:new_comment', { comment, comments_count: row.cnt });
@@ -337,13 +344,5 @@ module.exports = (io) => {
       }
       logger.info(`SOCKET disconnected: ${username}`);
     });
-  });
-
-  // Каждый пользователь присоединяется к личной комнате для push-уведомлений
-  io.use((socket, next) => {
-    socket.on('user:join_room', () => {
-      socket.join(`user:${socket.user?.id}`);
-    });
-    next();
   });
 };

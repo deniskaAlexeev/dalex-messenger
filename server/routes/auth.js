@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const svgCaptcha = require('svg-captcha');
 const { body, validationResult } = require('express-validator');
+const { authenticateToken } = require('../middleware/auth');
+const logger = require('../logger');
 const rateLimit = require('express-rate-limit');
 const { db } = require('../db/database');
 
@@ -150,6 +152,39 @@ router.post('/refresh', async (req, res) => {
     res.json({ accessToken, refreshToken: newRefresh });
   } catch {
     res.status(401).json({ error: 'Invalid refresh token' });
+  }
+});
+
+
+// PATCH /api/auth/password — смена пароля
+router.patch('/password', authenticateToken, [
+  body('currentPassword').notEmpty().withMessage('Укажите текущий пароль'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Новый пароль — минимум 6 символов')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await db.get('SELECT password_hash FROM users WHERE id = ?', [req.user.id]);
+
+    const ok = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Неверный текущий пароль' });
+
+    if (currentPassword === newPassword)
+      return res.status(400).json({ error: 'Новый пароль совпадает со старым' });
+
+    const hash = await bcrypt.hash(newPassword, 12);
+    await db.run('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [hash, Date.now(), req.user.id]);
+
+    // Инвалидируем все refresh-токены — принудительный ре-логин на всех устройствах
+    await db.run('DELETE FROM refresh_tokens WHERE user_id = ?', [req.user.id]);
+
+    logger.info(`Password changed for user ${req.user.username}`);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error('PATCH /password error', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 

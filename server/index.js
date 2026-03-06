@@ -6,9 +6,17 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const compression = require('compression');
 const logger = require('./logger');
 
-const { initializeDatabase } = require('./db/database');
+
+// ✅ БАГ-6: Проверяем обязательные переменные окружения
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  console.error('❌ JWT_SECRET или JWT_REFRESH_SECRET не заданы! Остановка сервера.');
+  process.exit(1);
+}
+
+const { initializeDatabase, db } = require('./db/database');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const friendRoutes = require('./routes/friends');
@@ -22,6 +30,9 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const isProd = process.env.NODE_ENV === 'production';
+
+// ✅ ОПТ-5: gzip/brotli сжатие — уменьшает трафик в 3-5x
+app.use(compression({ threshold: 1024 })); // сжимать ответы > 1KB
 
 // ✅ Доверяем прокси (обязательно для Render / Railway / любого хостинга)
 app.set('trust proxy', 1);
@@ -86,6 +97,16 @@ if (isProd) {
 setupSocket(io);
 
 initializeDatabase().then(() => {
+  // ✅ БАГ-5: Очистка устаревших refresh-токенов каждый час
+  setInterval(async () => {
+    try {
+      const result = await db.run('DELETE FROM refresh_tokens WHERE expires_at < ?', [Date.now()]);
+      if (result.changes > 0) logger.info(`Cleaned up ${result.changes} expired refresh token(s)`);
+    } catch (err) {
+      logger.error('Token cleanup error', err);
+    }
+  }, 60 * 60 * 1000);
+
   server.listen(PORT, () => {
     logger.success(`ДАЛЕКС запущен на порту ${PORT} [${isProd ? 'production' : 'development'}]`);
     logger.info(`👨‍💻 Разработчик: Денис Алексеев`);

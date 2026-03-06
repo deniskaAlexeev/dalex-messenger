@@ -130,3 +130,31 @@ input, textarea { font-family: var(--font-main); }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
 
 @media (max-width: 768px) { :root { --sidebar-width: 100vw; } }
+
+/* ════════════════════════════════════════
+   СВЕТЛАЯ ТЕМА
+════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-primary:    #f0f2f5;
+  --bg-secondary:  #ffffff;
+  --bg-tertiary:   #e9ebee;
+  --bg-hover:      #e2e5ea;
+  --bg-active:     #d8dce3;
+  --bg-input:      #ffffff;
+  --border:        #dde1e7;
+  --border-light:  #c9cdd4;
+  --text-primary:  #050505;
+  --text-secondary:#65676b;
+  --text-muted:    #8a8d91;
+  --accent:        #1877f2;
+  --accent-hover:  #166fe5;
+  --accent-dim:    rgba(24, 119, 242, 0.1);
+  --accent-glow:   rgba(24, 119, 242, 0.2);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.12);
+  --shadow-lg: 0 4px 20px rgba(0,0,0,0.15);
+  --shadow-accent: 0 0 20px rgba(24,119,242,0.1);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--border-light); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }

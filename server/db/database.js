@@ -152,7 +152,12 @@ async function initializeDatabase() {
     `CREATE INDEX IF NOT EXISTS idx_feed_posts ON feed_posts(created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_feed_likes ON feed_likes(post_id)`,
     `CREATE INDEX IF NOT EXISTS idx_feed_comments ON feed_comments(post_id)`,
-    `CREATE INDEX IF NOT EXISTS idx_reactions_msg ON message_reactions(message_id)`
+    `CREATE INDEX IF NOT EXISTS idx_reactions_msg ON message_reactions(message_id)`,
+    // ✅ ОПТ-6: индексы для поиска и производительности
+    `CREATE INDEX IF NOT EXISTS idx_users_search ON users(username, display_name)`,
+    `CREATE INDEX IF NOT EXISTS idx_users_online ON users(is_online)`,
+    `CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_friendships ON friend_requests(sender_id, receiver_id, status)`
   ];
 
   for (const stmt of tables) {
@@ -161,6 +166,10 @@ async function initializeDatabase() {
       if (!err.message.includes('already exists')) logger.warn('DB init warning: ' + err.message);
     });
   }
+  // ── Миграции для существующих БД ──
+  await db.run("ALTER TABLE users ADD COLUMN avatar_url TEXT DEFAULT NULL").catch(() => {});
+  await db.run("ALTER TABLE users ADD COLUMN avatar_data TEXT DEFAULT NULL").catch(() => {});
+
   logger.success('Database initialized');
 }
 

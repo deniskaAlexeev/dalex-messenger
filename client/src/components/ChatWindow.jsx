@@ -195,7 +195,7 @@ const ChatWindow = ({ conversationId, onBack }) => {
   const renderMsgContent = (msg, isMine) => {
     if (msg.is_deleted) return <p className={styles.msgText}>Сообщение удалено</p>;
     if (msg.message_type === 'image') {
-      return <img src={msg.content} alt="изображение" className={styles.msgImage} onClick={() => window.open(msg.content, '_blank')} />;
+      return <img src={msg.content} alt="изображение" loading="lazy" decoding="async" className={styles.msgImage} onClick={() => window.open(msg.content, '_blank')} title="Нажмите для открытия" />;
     }
     if (msg.message_type === 'voice') {
       try {

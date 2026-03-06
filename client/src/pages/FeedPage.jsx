@@ -27,23 +27,33 @@ const FeedPage = ({ onBack }) => {
     loadPosts();
     const socket = getSocket();
     if (socket) {
-      socket.on('feed:new_post', post => setPosts(prev => [post, ...prev]));
-      socket.on('feed:like_update', ({ postId, likes_count }) => {
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count } : p));
+      // ✅ БАГ-3: дедупликация при добавлении поста
+      const onNewPost = post => setPosts(prev => {
+        if (prev.find(p => p.id === post.id)) return prev;
+        return [post, ...prev];
       });
-      socket.on('feed:new_comment', ({ comment, comments_count }) => {
+      // ✅ БАГ-4: именованные обработчики для корректного снятия через off
+      const onLikeUpdate = ({ postId, likes_count }) => {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count } : p));
+      };
+      const onNewComment = ({ comment, comments_count }) => {
         setPosts(prev => prev.map(p => p.id === comment.post_id ? { ...p, comments_count } : p));
         setCommentsData(prev => ({
           ...prev,
           [comment.post_id]: [...(prev[comment.post_id] || []), comment]
         }));
-      });
+      };
+
+      socket.on('feed:new_post', onNewPost);
+      socket.on('feed:like_update', onLikeUpdate);
+      socket.on('feed:new_comment', onNewComment);
+
+      return () => {
+        socket.off('feed:new_post', onNewPost);
+        socket.off('feed:like_update', onLikeUpdate);
+        socket.off('feed:new_comment', onNewComment);
+      };
     }
-    return () => {
-      socket?.off('feed:new_post');
-      socket?.off('feed:like_update');
-      socket?.off('feed:new_comment');
-    };
   }, []);
 
   const loadPosts = async (before = null) => {
